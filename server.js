@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const path = require('path'); // REQUIRED for file paths
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -13,12 +13,12 @@ const PORT = process.env.PORT || 80;
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- STATIC FILE SERVING (Critical for Vercel) ---
-// This serves your css, images, and js folders located in the root
-app.use(express.static(path.join(__dirname))); 
+// --- STATIC FILE SERVING ---
+// Serves static files from the root directory
+app.use(express.static(path.join(__dirname)));
 
 // MongoDB Connection
-// Note: Ensure MONGO_URI in Vercel settings is a MongoDB Atlas Cloud URL
+// Note: Ensure MONGO_URI in Vercel settings is your MongoDB Atlas URL
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -27,7 +27,9 @@ mongoose.connect(process.env.MONGO_URI, {
     seedAdmin(); 
 }).catch(err => console.log('MongoDB Connection Error:', err));
 
-// --- SCHEMAS ---
+// --- SCHEMAS (UPDATED FOR VERCEL) ---
+// We check mongoose.models first to prevent "OverwriteModelError" in serverless environment
+
 const teamSchema = new mongoose.Schema({
     teamName: String,
     member1: String,
@@ -35,23 +37,27 @@ const teamSchema = new mongoose.Schema({
     status: { type: String, default: 'pending' },
     registeredAt: { type: Date, default: Date.now }
 });
-const Team = mongoose.model('Team', teamSchema);
+// FIX: Check if model exists before defining
+const Team = mongoose.models.Team || mongoose.model('Team', teamSchema);
 
 const contributorSchema = new mongoose.Schema({
     name: String,
     amount: Number
 });
-const Contributor = mongoose.model('Contributor', contributorSchema);
+// FIX: Check if model exists before defining
+const Contributor = mongoose.models.Contributor || mongoose.model('Contributor', contributorSchema);
 
 const adminSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true } 
 });
-const Admin = mongoose.model('Admin', adminSchema);
+// FIX: Check if model exists before defining (Critical for Login)
+const Admin = mongoose.models.Admin || mongoose.model('Admin', adminSchema);
 
 // --- SEED ADMIN ---
 async function seedAdmin() {
     try {
+        // We use the model we safely defined above
         const adminExists = await Admin.findOne({ username: 'admin' });
         if (!adminExists) {
             const newAdmin = new Admin({ username: 'admin', password: 'admin' });
@@ -63,7 +69,7 @@ async function seedAdmin() {
     }
 }
 
-// Nodemailer
+// Nodemailer Transporter
 const transporter = nodemailer.createTransport({
     host: "smtp.office365.com",
     port: 587,
@@ -76,7 +82,7 @@ const transporter = nodemailer.createTransport({
 
 // --- ROUTES ---
 
-// 1. HOME ROUTE (Fixes "Cannot GET /")
+// 1. HOME ROUTE
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -86,9 +92,10 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// 3. Admin Login
+// 3. Admin Login (UPDATED ERROR LOGGING)
 app.post('/admin/login', async (req, res) => {
     const { username, password } = req.body;
+    
     try {
         const admin = await Admin.findOne({ username, password });
         if (admin) {
@@ -97,7 +104,9 @@ app.post('/admin/login', async (req, res) => {
             res.status(401).json({ success: false, message: "Invalid Credentials" });
         }
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server Error" });
+        // Logs the actual error to Vercel console for debugging
+        console.error("LOGIN ERROR DETAILS:", err);
+        res.status(500).json({ success: false, message: "Server Error: " + err.message });
     }
 });
 
@@ -105,6 +114,7 @@ app.post('/admin/login', async (req, res) => {
 app.post('/register', async (req, res) => {
     const { teamName, member1, member2 } = req.body;
     const newTeam = new Team({ teamName, member1, member2, status: 'pending' });
+    
     try {
         await newTeam.save();
         res.status(200).json({ message: 'Registration Received.' });
@@ -120,6 +130,7 @@ app.get('/teams', async (req, res) => {
     try {
         let query = { status: 'approved' };
         if (type === 'all') query = {}; 
+        
         const teams = await Team.find(query).sort({ registeredAt: -1 });
         res.json(teams);
     } catch (err) {
@@ -186,7 +197,7 @@ app.get('/contributors', async (req, res) => {
     }
 });
 
-// --- VERCEL EXPORT (Required) ---
+// --- VERCEL EXPORT (REQUIRED) ---
 module.exports = app;
 
 // --- LOCAL SERVER START ---
