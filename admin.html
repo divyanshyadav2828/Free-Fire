@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>League Command Center</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700|Black+Ops+One" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { overflow-y: auto; cursor: default; }
+        .admin-container { max-width: 1000px; margin: 50px auto; padding: 20px; }
+        .clash-card { width: 100%; margin: 0; min-height: auto; padding: 40px; margin-bottom: 30px; }
+        
+        /* LOGIN FORM */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000 url('images/background2.jpg') center/cover; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: rgba(0,0,0,0.9); padding: 40px; border: 2px solid #FBDE79; border-radius: 10px; text-align: center; }
+        .login-input { display: block; width: 100%; margin: 10px 0; padding: 10px; background: #222; border: 1px solid #555; color: #fff; }
+        
+        /* DASHBOARD */
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #FBDE79; font-family: 'Black Ops One'; }
+        .section-title { color: #FF9800; font-family: 'Black Ops One'; font-size: 24px; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        
+        /* TABLE STYLES */
+        table { width: 100%; border-collapse: collapse; color: #fff; margin-bottom: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #FBDE79; text-transform: uppercase; }
+        tr:hover { background: rgba(255, 255, 255, 0.05); }
+        
+        .status-pending { color: #FF4D4D; font-weight: bold; }
+        .status-approved { color: #4CAF50; font-weight: bold; }
+        
+        .approve-btn { background: #4CAF50; color: #fff; border: none; padding: 5px 15px; cursor: pointer; border-radius: 3px; font-weight: bold; margin-right: 5px; }
+        .approve-btn:hover { background: #45a049; }
+
+        .deny-btn { background: #FF4D4D; color: #fff; border: none; padding: 5px 15px; cursor: pointer; border-radius: 3px; font-weight: bold; }
+        .deny-btn:hover { background: #d32f2f; }
+        
+        .logout-btn { background: #FF4D4D; color: #fff; border: none; padding: 8px 20px; cursor: pointer; border-radius: 4px; }
+
+        /* NEW STATS STYLE */
+        #contribStats { color: #4CAF50; font-family: 'Black Ops One'; font-size: 18px; margin-bottom: 20px; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2 style="color: #FBDE79; font-family: 'Black Ops One'; margin-bottom: 20px; font-size: 24px;">COMMAND CENTER ACCESS</h2>
+            <input type="text" id="adminUser" class="login-input" placeholder="USERNAME">
+            <input type="password" id="adminPass" class="login-input" placeholder="PASSWORD">
+            <button class="action-btn main-btn" onclick="adminLogin()">AUTHENTICATE</button>
+            <p id="loginMsg" style="color: red; margin-top: 10px; font-size: 12px;"></p>
+        </div>
+    </div>
+
+    <div class="admin-container" id="dashboard" style="display: none;">
+        
+        <div class="admin-header">
+            <h1>ADMIN DASHBOARD</h1>
+            <button class="logout-btn" onclick="location.reload()">LOGOUT</button>
+        </div>
+
+        <div class="clash-card">
+            <div class="section-title">SQUAD REGISTRATIONS</div>
+            <table id="teamsTable">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Members</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="teamsBody"></tbody>
+            </table>
+        </div>
+
+        <div class="clash-card">
+            <div class="section-title">MANAGE CONTRIBUTORS</div>
+            
+            <div id="contribStats">Loading Stats...</div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="contribName" class="login-input" placeholder="Contributor Name" style="margin: 0;">
+                <input type="number" id="contribAmount" class="login-input" placeholder="Amount (₹)" style="margin: 0;">
+                <button class="action-btn main-btn" style="width: auto;" onclick="addContributor()">ADD</button>
+            </div>
+
+            <table id="contribTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="contribBody"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // LOGIN LOGIC
+        async function adminLogin() {
+            const u = document.getElementById('adminUser').value;
+            const p = document.getElementById('adminPass').value;
+            
+            const res = await fetch('/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadData();
+            } else {
+                document.getElementById('loginMsg').textContent = "ACCESS DENIED";
+            }
+        }
+
+        // LOAD DATA
+        function loadData() {
+            fetchTeams();
+            fetchContributors();
+        }
+
+        // TEAMS LOGIC
+        async function fetchTeams() {
+            const res = await fetch('/teams?type=all');
+            const teams = await res.json();
+            const tbody = document.getElementById('teamsBody');
+            tbody.innerHTML = '';
+
+            teams.forEach(t => {
+                const tr = document.createElement('tr');
+                let actionHtml = '';
+                
+                if (t.status === 'pending') {
+                    actionHtml = `
+                        <button class="approve-btn" onclick="approveTeam('${t._id}')">APPROVE</button>
+                        <button class="deny-btn" onclick="deleteTeam('${t._id}', 'deny')">DENY</button>
+                    `;
+                } else {
+                    actionHtml = `
+                        <button class="deny-btn" onclick="deleteTeam('${t._id}', 'delete')">DELETE</button>
+                    `;
+                }
+
+                tr.innerHTML = `
+                    <td>${t.teamName}</td>
+                    <td>${t.member1} <br> ${t.member2}</td>
+                    <td class="status-${t.status}">${t.status.toUpperCase()}</td>
+                    <td>${actionHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function approveTeam(id) {
+            if(!confirm('Confirm approval for this squad?')) return;
+            const res = await fetch('/admin/approve', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ teamId: id })
+            });
+            if(res.ok) fetchTeams();
+        }
+
+        async function deleteTeam(id, actionType) {
+            const msg = actionType === 'deny' 
+                ? 'Are you sure you want to DENY this request? Data will be deleted.' 
+                : 'Are you sure you want to DELETE this approved team?';
+                
+            if(!confirm(msg)) return;
+
+            const res = await fetch('/admin/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ teamId: id })
+            });
+            if(res.ok) fetchTeams();
+        }
+
+        // CONTRIBUTOR LOGIC
+        async function addContributor() {
+            const name = document.getElementById('contribName').value;
+            const amount = document.getElementById('contribAmount').value;
+            if(!name || !amount) return alert('Fill all fields');
+
+            await fetch('/admin/contributor', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, amount })
+            });
+            document.getElementById('contribName').value = '';
+            document.getElementById('contribAmount').value = '';
+            fetchContributors();
+        }
+
+        // UPDATED: FETCH CONTRIBUTORS WITH TOTALS
+        async function fetchContributors() {
+            const res = await fetch('/contributors');
+            const data = await res.json();
+            const tbody = document.getElementById('contribBody');
+            const statsDiv = document.getElementById('contribStats');
+            
+            tbody.innerHTML = '';
+            
+            // Calculate Totals
+            const totalCount = data.length;
+            const totalAmount = data.reduce((sum, item) => sum + (item.amount || 0), 0);
+            
+            // Update Stats Display
+            statsDiv.innerHTML = `TOTAL CONTRIBUTORS: ${totalCount} &nbsp;|&nbsp; TOTAL COLLECTED: ₹${totalAmount}`;
+
+            data.forEach(c => {
+                tbody.innerHTML += `<tr><td>${c.name}</td><td>₹${c.amount}</td></tr>`;
+            });
+        }
+    </script>
+</body>
+</html>

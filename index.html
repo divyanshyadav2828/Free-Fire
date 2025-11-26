@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Maqsood Free Fire League</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:site_name" content="Maqsood Free Fire League">
+  <meta property="og:title" content="Maqsood Free Fire League | Tournament" />
+  <meta property="og:type" content="website" />
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/jquery.slick/1.6.0/slick.css'>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700|Black+Ops+One" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="shortcut icon" href="images/favicon.ico" />
+
+  <style>
+    /* DEVELOPER POPUP STYLES */
+    #devPopup {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100vh;
+        background-color: rgba(0,0,0,0.95);
+        z-index: 99999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .dev-frame {
+        border: 4px solid #FBDE79;
+        padding: 30px;
+        background: rgba(20, 20, 20, 0.95);
+        text-align: center;
+        box-shadow: 0 0 50px rgba(255, 152, 0, 0.6);
+        border-radius: 10px;
+        animation: scaleIn 0.5s ease-out;
+        max-width: 90%;
+    }
+    .dev-photo {
+        width: 150px; height: 150px;
+        border-radius: 50%;
+        border: 4px solid #FF9800;
+        object-fit: cover;
+        margin-bottom: 20px;
+        box-shadow: 0 0 20px rgba(255, 152, 0, 0.4);
+    }
+    .dev-role {
+        color: #aaa;
+        font-size: 14px;
+        letter-spacing: 3px;
+        margin-bottom: 10px;
+        font-family: 'Black Ops One', cursive;
+        text-transform: uppercase;
+    }
+    .dev-name-large {
+        color: #FBDE79;
+        font-size: 28px;
+        font-family: 'Black Ops One', cursive;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-shadow: 2px 2px 0px #000;
+    }
+    @keyframes scaleIn {
+        from { transform: scale(0.5); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- CUSTOM CURSOR ELEMENT -->
+  <div id="custom-cursor"></div>
+
+  <!-- DEVELOPER POPUP -->
+  <div id="devPopup">
+      <div class="dev-frame">
+          <div class="dev-role">WEB APP DEVELOPED BY</div>
+          <img src="images/divy.png" alt="Developer" class="dev-photo">
+          <div class="dev-name-large">DIVYANSH YADAV</div>
+      </div>
+  </div>
+
+  <canvas></canvas>
+  
+  <!-- LOADING OVERLAY -->
+  <div id="overlay" class="overlay">
+    <div class="info">
+      <div class="head">LOADING BATTLEGROUND...</div>
+      <p style="margin-bottom: 20px;">Maqsood Free Fire League</p>
+      <p style="margin-bottom: 20px;">Please use headphones or increase your device’s volume for the best experience.</p>
+      <button id="enterBtn" class="action-btn main-btn" style="width: auto; padding: 15px 30px; font-size: 18px;">
+        ENTER MAQSOOD FREE FIRE LEAGUE ⛑️
+      </button>
+    </div>
+  </div>
+
+  <!-- Registration Modal -->
+  <div id="registerModal" class="modal-overlay">
+    <div class="clash-card barbarian modal-card">
+      <div class="close-btn" onclick="closeModal('registerModal')">X</div>
+      <div class="letter-box" style="top: 5%;">
+        <div class="label-box">SQUAD REGISTRATION</div>
+        <form id="regForm" class="game-form">
+            <input type="text" id="teamName" placeholder="TEAM NAME" required>
+            <input type="text" id="member1" placeholder="MEMBER 1 IGN" required>
+            <input type="text" id="member2" placeholder="MEMBER 2 IGN" required>
+            <button type="submit" class="action-btn">CONFIRM DEPLOYMENT</button>
+        </form>
+        <div id="regStatus" style="margin-top:10px; font-size:12px; color:#FBDE79;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registered Teams List Modal -->
+  <div id="teamsModal" class="modal-overlay">
+    <div class="clash-card barbarian modal-card">
+      <div class="close-btn" onclick="closeModal('teamsModal')">X</div>
+      <div class="letter-box" style="top: 5%;">
+        <div class="label-box">REGISTERED SQUADS</div>
+        <div class="teams-list-container" id="teamsList">
+            <div class="loading-text">Loading Data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW: Contributors List Modal -->
+  <div id="contributorsModal" class="modal-overlay">
+    <div class="clash-card barbarian modal-card">
+      <div class="close-btn" onclick="closeModal('contributorsModal')">X</div>
+      <div class="letter-box" style="top: 5%;">
+        <div class="label-box">OUR SUPPORTERS</div>
+        <div class="teams-list-container" id="allContributorsList">
+            <div class="loading-text">Loading Data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Enlarge Modal -->
+  <div id="qrModal" class="modal-overlay" onclick="closeModal('qrModal')">
+    <div class="clash-card barbarian modal-card" style="height: auto; min-height: auto; padding-bottom: 20px;">
+      <div class="close-btn" onclick="closeModal('qrModal')">X</div>
+      <div class="qr-full-container">
+        <img src="images/Qrcode.png" alt="Full Payment QR" class="qr-full">
+        <div class="label-box" style="margin-top: 15px;">SCAN TO PAY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terms and Conditions Modal -->
+  <div id="tcModal" class="modal-overlay">
+    <div class="clash-card barbarian modal-card">
+      <div class="close-btn" onclick="closeModal('tcModal')">X</div>
+      <div class="letter-box" style="top: 5%; width: 90%; left: 5%;">
+        <div class="label-box" style="background-color: #ff4d4d; color: #fff;">WARNING: READ BEFORE REGISTERING</div>
+        <div class="tc-content">
+            <p>This tournament is being conducted in a <strong>controlled, local environment</strong>.</p>
+            <p>Only individuals who have received the <strong>official invitation link via email</strong> are permitted to register.</p>
+            <p class="tc-highlight">⚠️ RESTRICTED ACCESS</p>
+            <p>If you are not aware of this event or have not received the invitation link directly, please <strong>DO NOT REGISTER</strong> and <strong>DO NOT MAKE ANY PAYMENT</strong>.</p>
+            <p class="tc-highlight">🚫 NO REFUND POLICY</p>
+            <p>Any payment made by individuals who are not invited participants <strong>WILL NOT BE REFUNDED</strong> under any circumstances.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #aaa;">Please review and acknowledge this policy before proceeding.</p>
+        </div>      
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-container">
+    
+    <!-- SLIDE 1: INTRO -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <div class="leaf"></div> 
+        <div class="letter-box">
+          <div class="invitee">ATTENTION SURVIVORS,</div>
+          <div class="invitation">REGISTRATIONS OPEN FOR</div>
+          <!-- ADDED GLITCH CLASS AND DATA ATTRIBUTE HERE -->
+          <div class="inviters glitch" data-text="MAQSOOD&#10;FREE FIRE&#10;LEAGUE 🎮">MAQSOOD<br />FREE FIRE<br />LEAGUE 🎮</div>
+          <div class="invitation">
+            <span class="label-box">18–19 DECEMBER</span>
+          </div>
+          <div class="action-buttons-container">
+            <button class="action-btn main-btn" onclick="openModal('registerModal')">REGISTER NOW</button>
+            <button class="action-btn sub-btn" onclick="openModal('teamsModal')">SEE REGISTERED TEAMS</button>
+            <div class="tc-link" onclick="openModal('tcModal')">TERMS & CONDITIONS ⚠️</div>
+          </div>
+        </div>
+        <button class="nextBtn">NEXT >></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <button class="prevBtn"><< PREV</button>
+        <div class="leaf"></div>
+        <div class="letter-box">
+          <div class="wrap-box">
+            <span class="label-box">MISSION BRIEF</span>
+          </div>
+          <div class="wrap-box">
+            <ul class="timeline">
+              <li>
+                <div class="left text">
+                  <div class="timeline-title">DEADLINE</div>
+                  <div class="timeline-time">2 DEC ⏳</div>
+                </div>
+              </li>
+              <li>
+                <div class="right text" style="text-align: center; width: 100%;">
+                  <div class="timeline-title">SQUAD FEE</div>
+                  <div class="timeline-time">₹100 / TEAM</div>
+                </div>
+              </li>
+              <li>
+                <div class="right text" style="text-align: center; width: 100%;">
+                  <div class="timeline-title">MANDATORY ENTRY</div>
+                  <div class="timeline-time">₹20 / PLAYER</div>
+                </div>
+              </li>
+              <li>
+                <div class="right text" style="text-align: center; width: 100%;">
+                  <div class="timeline-title">FORMAT</div>
+                  <div class="timeline-time">MAX 2 PLAYERS 👥</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button class="nextBtn">NEXT >></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <button class="prevBtn"><< PREV</button>
+        <div class="leaf"></div>
+        <div class="letter-box">
+          <div class="wrap-box">
+            <span class="label-box">BOOYAH REWARDS 🏆</span>
+          </div>
+          <div class="wrap-box">
+            <ul class="timeline">
+              <li>
+                <div class="left text">
+                  <div class="timeline-title">WINNER</div>
+                </div>
+                <div class="right text">
+                  <div class="timeline-time">₹500 🥇</div>
+                </div>
+              </li>
+              <li>
+                <div class="left text">
+                  <div class="timeline-title">RUNNER-UP</div>
+                </div>
+                <div class="right text">
+                  <div class="timeline-time">₹300 🥈</div>
+                </div>
+              </li>
+              <li>
+                <div class="left text">
+                  <div class="timeline-title">MATCH WINNER</div>
+                </div>
+                <div class="right text">
+                  <div class="timeline-time">₹10</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button class="nextBtn">NEXT >></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <button class="prevBtn"><< PREV</button>
+        <div class="leaf"></div>
+        <div class="letter-box">
+          <div class="wrap-box">
+            <span class="label-box">RULES OF ENGAGEMENT ⚠️</span>
+          </div>
+          <div class="address" style="padding: 0 20px; font-size: 14px; margin-top: 15px;">
+            <p>STRICT COMPLIANCE REQUIRED:</p>
+            <br>
+            <ul style="list-style: none; line-height: 24px;">
+              <li>🚫 NO REVIVING</li>
+              <li>🚫 NO GRENADES</li>
+              <li>🚫 NO EXITING MATCH</li>
+            </ul>
+            <br>
+            <p style="color: #ff4d4d; font-weight: bold; font-size: 16px;">PENALTY: ₹100</p>
+            <p style="font-size: 12px; margin-top: 10px; color: #ccc;">We request full cooperation for a fair and disciplined league 🤝.</p>
+          </div>
+        </div>
+        <button class="nextBtn">NEXT >></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <button class="prevBtn"><< PREV</button>
+        <div class="leaf"></div>
+        <div class="letter-box">
+          <div class="wrap-box">
+            <div class="countdown">
+              <div class="first">SCAN QR OR PAY TO UPI</div>
+              <div class="qr-container" onclick="openModal('qrModal')">
+                <img src="images/Qrcode2.png" alt="Payment QR" class="qr-thumb">
+                <p class="click-hint">(TAP TO ENLARGE)</p>
+              </div>
+              <div class="days" style="font-size: 24px; color: #FBDE79; margin-top: 10px;">6397108101</div>
+              <div class="last">SUBMIT DETAILS NOW</div>
+            </div>
+          </div>
+          <div class="wrap-box" style="margin-top: 15px;">
+            <span class="label-box" style="background:transparent; border: 1px solid #FBDE79; color: #FBDE79;">ORGANISED BY</span>
+            <div class="organizers-container">
+                <div class="organizer-profile">
+                    <img src="images/vkvkjpg.jpg" alt="Vikas" class="profile-img">
+                    <span class="organizer-name">VIKAS RAJPUT</span>
+                </div>
+                <div class="organizer-profile">
+                    <img src="images/sh.jpg" alt="Shaurya" class="profile-img">
+                    <span class="organizer-name">SHAURYA DEOL</span>
+                </div>
+            </div>
+          </div>
+        </div>
+        <button class="nextBtn">NEXT >></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: SPECIAL THANKS & VIEW CONTRIBUTORS -->
+    <div class="wrapper">
+      <div class="clash-card barbarian">
+        <button class="prevBtn"><< PREV</button>
+        <div class="leaf"></div>
+        <div class="letter-box">
+          <div class="wrap-box">
+            <span class="label-box">SPECIAL THANKS TO <BR> Sponsors</span>
+          </div>
+          
+          <div class="organizers-container" style="margin-top: 40px;">
+              <div class="organizer-profile">
+                  <img src="images/dush.jpg" alt="Person 1" class="profile-img">
+                  <span class="organizer-name">Dushyant Parihar</span>
+              </div>
+              <div class="organizer-profile">
+                  <img src="images/ashish.jpg" alt="Person 2" class="profile-img">
+                  <span class="organizer-name">Ashish Yaduvanshi<BR></span>
+              </div>
+          </div>
+
+          <!-- NEW BUTTON TO VIEW ALL CONTRIBUTORS -->
+          <div style="margin-top: 25px;">
+             <button class="action-btn sub-btn" onclick="openModal('contributorsModal')">VIEW ALL CONTRIBUTORS</button>
+          </div>
+
+          <p style="margin-top: 25px; font-size: 12px; color: #aaa;">
+             JAI MAA BEHADWALI DHAM (FIROZABAD) 
+          </p>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-credit">
+   Designed & Developed by Divyansh Yadav
+  </div>
+
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.min.js'></script>
+  <script src='https://cdn.jsdelivr.net/jquery.slick/1.6.0/slick.min.js'></script>
+  <script src="js/index.js"></script>
+  
+  <script>
+    document.getElementById('enterBtn').addEventListener('click', function() {
+        var devPopup = document.getElementById('devPopup');
+        devPopup.style.display = 'flex';
+        setTimeout(function() {
+            $(devPopup).fadeOut(1000);
+        }, 870);
+    });
+  </script>
+</body>
+</html>
