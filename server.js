@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const path = require('path');
+const path = require('path'); // REQUIRED for file paths
 require('dotenv').config();
 
 const app = express();
@@ -12,61 +12,58 @@ const PORT = process.env.PORT || 80;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('./')); // Serves static files
+
+// --- STATIC FILE SERVING (Critical for Vercel) ---
+// This serves your css, images, and js folders located in the root
+app.use(express.static(path.join(__dirname))); 
 
 // MongoDB Connection
+// Note: Ensure MONGO_URI in Vercel settings is a MongoDB Atlas Cloud URL
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 }).then(() => {
     console.log('MongoDB Connected');
-    seedAdmin(); // Run the script to create admin user on startup
+    seedAdmin(); 
 }).catch(err => console.log('MongoDB Connection Error:', err));
 
 // --- SCHEMAS ---
-
-// Team Schema
 const teamSchema = new mongoose.Schema({
     teamName: String,
     member1: String,
     member2: String,
-    status: { type: String, default: 'pending' }, // pending, approved
+    status: { type: String, default: 'pending' },
     registeredAt: { type: Date, default: Date.now }
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Contributor Schema
 const contributorSchema = new mongoose.Schema({
     name: String,
     amount: Number
 });
 const Contributor = mongoose.model('Contributor', contributorSchema);
 
-// Admin Schema (For Login)
 const adminSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true } 
 });
 const Admin = mongoose.model('Admin', adminSchema);
 
-// --- SCRIPT TO MAKE ADMIN USER ---
+// --- SEED ADMIN ---
 async function seedAdmin() {
     try {
         const adminExists = await Admin.findOne({ username: 'admin' });
         if (!adminExists) {
-            // Create default admin if it doesn't exist
             const newAdmin = new Admin({ username: 'admin', password: 'admin' });
             await newAdmin.save();
-            console.log('System Message: Default Admin User (admin/admin) created successfully.');
-        } else {
-            console.log('System Message: Admin user already exists.');
+            console.log('Default Admin Created');
         }
     } catch (error) {
         console.error('Error seeding admin:', error);
     }
 }
 
-// Nodemailer Transporter
+// Nodemailer
 const transporter = nodemailer.createTransport({
     host: "smtp.office365.com",
     port: 587,
@@ -79,15 +76,19 @@ const transporter = nodemailer.createTransport({
 
 // --- ROUTES ---
 
-// 1. Serve Admin Page
+// 1. HOME ROUTE (Fixes "Cannot GET /")
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// 2. Admin Page
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// 2. Admin Login (Database Check)
+// 3. Admin Login
 app.post('/admin/login', async (req, res) => {
     const { username, password } = req.body;
-    
     try {
         const admin = await Admin.findOne({ username, password });
         if (admin) {
@@ -100,28 +101,25 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-// 3. Register Team (User Facing) - Sets to PENDING
+// 4. Register Team
 app.post('/register', async (req, res) => {
     const { teamName, member1, member2 } = req.body;
     const newTeam = new Team({ teamName, member1, member2, status: 'pending' });
-    
     try {
         await newTeam.save();
-        // We DO NOT send email here anymore. We send it on approval.
-        res.status(200).json({ message: 'Registration Received. Waiting for Approval.' });
+        res.status(200).json({ message: 'Registration Received.' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
-// 4. Get Teams (Admin: all, Public: approved only)
+// 5. Get Teams
 app.get('/teams', async (req, res) => {
-    const { type } = req.query; // 'all' for admin, undefined for public
+    const { type } = req.query; 
     try {
         let query = { status: 'approved' };
-        if (type === 'all') query = {}; // Admin sees everything
-        
+        if (type === 'all') query = {}; 
         const teams = await Team.find(query).sort({ registeredAt: -1 });
         res.json(teams);
     } catch (err) {
@@ -129,7 +127,7 @@ app.get('/teams', async (req, res) => {
     }
 });
 
-// 5. Approve Team (Admin Only)
+// 6. Approve Team
 app.post('/admin/approve', async (req, res) => {
     const { teamId } = req.body;
     try {
@@ -139,25 +137,15 @@ app.post('/admin/approve', async (req, res) => {
         team.status = 'approved';
         await team.save();
 
-        // Send Email NOW (Only on approval)
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: "org@vidyagyan.in, org2.vidyagyan.in",
             subject: `Squad APPROVED: ${team.teamName}`,
-            text: `
-                Squad Registration Approved!
-                
-                Team Name: ${team.teamName}
-                Member 1: ${team.member1}
-                Member 2: ${team.member2}
-                
-                Status: APPROVED ✅
-            `
+            text: `Squad Registration Approved!\nTeam: ${team.teamName}\nStatus: APPROVED ✅`
         };
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) console.log('Email Error:', error);
-            else console.log('Email sent: ' + info.response);
         });
 
         res.json({ success: true });
@@ -166,18 +154,18 @@ app.post('/admin/approve', async (req, res) => {
     }
 });
 
-// 6. Delete/Deny Team (Admin Only) - NEW
+// 7. Delete Team
 app.post('/admin/delete', async (req, res) => {
     const { teamId } = req.body;
     try {
         await Team.findByIdAndDelete(teamId);
-        res.json({ success: true, message: "Team deleted successfully" });
+        res.json({ success: true, message: "Team deleted" });
     } catch (err) {
         res.status(500).json({ message: "Error deleting team" });
     }
 });
 
-// 7. Manage Contributors
+// 8. Manage Contributors
 app.post('/admin/contributor', async (req, res) => {
     const { name, amount } = req.body;
     try {
@@ -198,7 +186,10 @@ app.get('/contributors', async (req, res) => {
     }
 });
 
+// --- VERCEL EXPORT (Required) ---
 module.exports = app;
+
+// --- LOCAL SERVER START ---
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
